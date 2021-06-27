@@ -1,20 +1,27 @@
 package com.kaiqueferreira.dogsappmvvm.view;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
+import androidx.lifecycle.Observer;
+import androidx.lifecycle.ViewModelProviders;
 import androidx.navigation.NavDirections;
 import androidx.navigation.Navigation;
 
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.kaiqueferreira.dogsappmvvm.DetailFragmentArgs;
 import com.kaiqueferreira.dogsappmvvm.R;
+import com.kaiqueferreira.dogsappmvvm.model.DogBreed;
+import com.kaiqueferreira.dogsappmvvm.viewmodel.DetailViewModel;
 
 import butterknife.BindView;
 import butterknife.ButterKnife;
@@ -29,6 +36,23 @@ public class DetailFragment extends Fragment {
     TextView tv2;*/
 
     private  int dogUuid;
+    private DetailViewModel viewModel;
+
+
+    @BindView(R.id.dogImage)
+    ImageView dogImage;
+
+    @BindView(R.id.dogName)
+    TextView dogName;
+
+    @BindView(R.id.dogPurpose)
+    TextView dogPurpose;
+
+    @BindView(R.id.dogTemperament)
+    TextView dogTemperament;
+
+    @BindView(R.id.dogLifespan)
+    TextView dogLifespan;
 
     public DetailFragment() {
         // Required empty public constructor
@@ -54,7 +78,26 @@ public class DetailFragment extends Fragment {
             dogUuid = DetailFragmentArgs.fromBundle(getArguments()).getDogUuid();
             //tv2.setText(String.valueOf(dogUuid));
         }
+
+        viewModel  = ViewModelProviders.of(this).get(DetailViewModel.class);
+        viewModel.fetch();
+
+        observerViewModel();
+
         //fab.setOnClickListener(view1 -> onGoToList());
+    }
+
+    @SuppressLint("FragmentLiveDataObserve")
+    private void observerViewModel() {
+        viewModel.dogLiveData.observe(this, dogBreed -> {
+            if (dogBreed != null && dogBreed instanceof DogBreed) {
+                dogName.setText(dogBreed.dogBreed);
+                dogPurpose.setText(dogBreed.bredFor);
+                dogTemperament.setText(dogBreed.temperament);
+                dogLifespan.setText(dogBreed.lifeSpan);
+
+            }
+        });
     }
 
     /*private void onGoToList() {
