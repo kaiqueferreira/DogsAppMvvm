@@ -14,6 +14,7 @@ import com.kaiqueferreira.dogsappmvvm.model.DogBreed;
 import com.kaiqueferreira.dogsappmvvm.model.DogDao;
 import com.kaiqueferreira.dogsappmvvm.model.DogDatabase;
 import com.kaiqueferreira.dogsappmvvm.model.DogsApiService;
+import com.kaiqueferreira.dogsappmvvm.util.NotificationsHelper;
 import com.kaiqueferreira.dogsappmvvm.util.SharedPreferencesHelper;
 
 import java.util.ArrayList;
@@ -88,6 +89,9 @@ public class ListViewModel extends AndroidViewModel {
                                 insertTask = new InsertDogsTask();
                                 insertTask.execute(dogBreeds);
                                 Toast.makeText(getApplication(), "Dogs retrivied from endpoint", Toast.LENGTH_SHORT).show();
+
+                                //Create notification
+                                NotificationsHelper.getInstance(getApplication()).createNotification();
                                 //dogs.setValue(dogBreeds);
                                 //dogLoadError.setValue(false);
                                 //loading.setValue(false);
