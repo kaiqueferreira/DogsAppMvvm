@@ -1,15 +1,20 @@
 package com.kaiqueferreira.dogsappmvvm.view;
 
 import android.annotation.SuppressLint;
+import android.graphics.Bitmap;
+import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.databinding.DataBindingUtil;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.Observer;
 import androidx.lifecycle.ViewModelProviders;
 import androidx.navigation.NavDirections;
 import androidx.navigation.Navigation;
+import androidx.palette.graphics.Palette;
+import androidx.swiperefreshlayout.widget.CircularProgressDrawable;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,10 +22,16 @@ import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.target.CustomTarget;
+import com.bumptech.glide.request.transition.Transition;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.kaiqueferreira.dogsappmvvm.DetailFragmentArgs;
 import com.kaiqueferreira.dogsappmvvm.R;
+import com.kaiqueferreira.dogsappmvvm.databinding.FragmentDetailBinding;
 import com.kaiqueferreira.dogsappmvvm.model.DogBreed;
+import com.kaiqueferreira.dogsappmvvm.model.DogPalette;
+import com.kaiqueferreira.dogsappmvvm.util.Util;
 import com.kaiqueferreira.dogsappmvvm.viewmodel.DetailViewModel;
 
 import butterknife.BindView;
@@ -28,17 +39,12 @@ import butterknife.ButterKnife;
 
 public class DetailFragment extends Fragment {
 
-
-    /*@BindView(R.id.floatingActionButton2)
-    FloatingActionButton fab;
-
-    @BindView(R.id.textView2)
-    TextView tv2;*/
-
-    private  int dogUuid;
+    private int dogUuid;
     private DetailViewModel viewModel;
+    private FragmentDetailBinding binding;
 
 
+    /* Traditionally method
     @BindView(R.id.dogImage)
     ImageView dogImage;
 
@@ -52,21 +58,26 @@ public class DetailFragment extends Fragment {
     TextView dogTemperament;
 
     @BindView(R.id.dogLifespan)
-    TextView dogLifespan;
+    TextView dogLifespan;*/
 
     public DetailFragment() {
         // Required empty public constructor
     }
 
 
-
     @Override
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         // Inflate the layout for this fragment
-        View view = inflater.inflate(R.layout.fragment_detail, container, false);
-        ButterKnife.bind(this,view);
-        return view;
+        //View view = inflater.inflate(R.layout.fragment_detail, container, false);
+        //ButterKnife.bind(this,view);
+        //return view;
+        FragmentDetailBinding binding = DataBindingUtil.inflate(inflater, R.layout.fragment_detail, container, false);
+        this.binding = binding;
+        return binding.getRoot();
+
+        //Use databinding  like a viewholder findviewById
+        //binding.dogName.setText("Some text");
     }
 
 
@@ -79,8 +90,8 @@ public class DetailFragment extends Fragment {
             //tv2.setText(String.valueOf(dogUuid));
         }
 
-        viewModel  = ViewModelProviders.of(this).get(DetailViewModel.class);
-        viewModel.fetch();
+        viewModel = ViewModelProviders.of(this).get(DetailViewModel.class);
+        viewModel.fetch(dogUuid);
 
         observerViewModel();
 
@@ -90,15 +101,60 @@ public class DetailFragment extends Fragment {
     @SuppressLint("FragmentLiveDataObserve")
     private void observerViewModel() {
         viewModel.dogLiveData.observe(this, dogBreed -> {
-            if (dogBreed != null && dogBreed instanceof DogBreed) {
+            //Verify getContext() != null, sometimes application destroyed and don't have a context
+            if (dogBreed != null && dogBreed instanceof DogBreed && getContext() != null) {
+                binding.setDog(dogBreed);
+
+                //Verify imageUrl not null when use in Palette
+                if (dogBreed.imageUrl != null) {
+                    setupBackgroundColor(dogBreed.imageUrl);
+                }
+
+            }
+        });
+    }
+
+    private void setupBackgroundColor(String url) {
+        Glide.with(this)
+                .asBitmap()
+                .load(url)
+                .into(new CustomTarget<Bitmap>() { //Not convert to lambda when have two functions
+                    @Override
+                    public void onResourceReady(@NonNull Bitmap resource, @Nullable Transition<? super Bitmap> transition) {
+                        Palette.from(resource)
+                                .generate(palette -> {
+                                    //Get Dominant color
+                                    //int intColor = palette.getDominantSwatch().getRgb();
+                                    int intColor = palette.getLightMutedSwatch().getRgb();
+                                    DogPalette myPalette = new DogPalette(intColor);
+                                    binding.setPalette(myPalette);
+                                });
+                    }
+
+                    @Override
+                    public void onLoadCleared(@Nullable Drawable placeholder) {
+
+                    }
+                });
+    }
+
+    /*@SuppressLint("FragmentLiveDataObserve")
+    private void observerViewModel() {
+        viewModel.dogLiveData.observe(this, dogBreed -> {
+            //Verify getContext() != null, sometimes application destroyed and don't have a context
+            if (dogBreed != null && dogBreed instanceof DogBreed && getContext() != null) {
                 dogName.setText(dogBreed.dogBreed);
                 dogPurpose.setText(dogBreed.bredFor);
                 dogTemperament.setText(dogBreed.temperament);
                 dogLifespan.setText(dogBreed.lifeSpan);
 
+                if (dogBreed.imageUrl != null) {
+                    Util.loadImage(dogImage, dogBreed.imageUrl, new CircularProgressDrawable(getContext()));
+                }
+
             }
         });
-    }
+    }*/
 
     /*private void onGoToList() {
         NavDirections action = DetailFragmentDirections.actionList();
