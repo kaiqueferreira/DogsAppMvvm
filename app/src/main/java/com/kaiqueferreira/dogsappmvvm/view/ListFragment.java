@@ -77,6 +77,17 @@ public class ListFragment extends Fragment {
        dogsList.setLayoutManager(new LinearLayoutManager(getContext()));
        dogsList.setAdapter(dogsListAdapter);
 
+
+
+       //If you refresh, get info to the endpoint
+       refreshLayout.setOnRefreshListener(() -> {
+           dogsList.setVisibility(View.GONE);
+           listError.setVisibility(View.GONE);
+           loadingView.setVisibility(View.VISIBLE);
+           viewModel.refreshBypassCache();
+           refreshLayout.setRefreshing(false);
+       });
+
        observeViewModel();
     }
 

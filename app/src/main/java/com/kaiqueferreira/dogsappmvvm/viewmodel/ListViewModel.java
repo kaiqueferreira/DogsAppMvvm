@@ -14,6 +14,7 @@ import com.kaiqueferreira.dogsappmvvm.model.DogBreed;
 import com.kaiqueferreira.dogsappmvvm.model.DogDao;
 import com.kaiqueferreira.dogsappmvvm.model.DogDatabase;
 import com.kaiqueferreira.dogsappmvvm.model.DogsApiService;
+import com.kaiqueferreira.dogsappmvvm.util.SharedPreferencesHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,19 +30,50 @@ public class ListViewModel extends AndroidViewModel {
     public MutableLiveData<Boolean> dogLoadError = new MutableLiveData<Boolean>();
     public MutableLiveData<Boolean> loading = new MutableLiveData<Boolean>();
 
+    private DogsApiService dogsService = new DogsApiService();
+    private CompositeDisposable disposable = new CompositeDisposable();
 
     //Prevent the app from destroying a task
+    //Insert task
     private AsyncTask<List<DogBreed>, Void, List<DogBreed>> insertTask;
+    //Recovery task
+    private AsyncTask<Void,Void,List<DogBreed>> retrieveTask;
+
+    //Cache data in application used shared preferences
+    private SharedPreferencesHelper prefHelper = SharedPreferencesHelper.getInstance(getApplication());
+    //System clock works with milliseconds
+    //You choose the time to update, in this case it's 5 minutes
+    private long refreshTime = 5 * 60 * 1000 * 1000 * 1000L;
 
     public ListViewModel(@NonNull Application application) {
         super(application);
     }
 
-    private DogsApiService dogsService = new DogsApiService();
-    private CompositeDisposable disposable = new CompositeDisposable();
 
     public void refresh() {
+
+        long updateTime = prefHelper.getUpdateTime();
+        long currentTime = System.nanoTime();
+
+        //If not first time to run, get data to local database, in this case, Room Database
+        if (updateTime != 0 && currentTime - updateTime < refreshTime){
+            fetchFromDatabase();
+        }
+        else {
+            //If the first time to run, get data to Api database, in this case
+            fetchFromRemote();
+        }
+        fetchFromDatabase();
+    }
+
+    public void refreshBypassCache() {
         fetchFromRemote();
+    }
+
+    private void fetchFromDatabase(){
+        loading.setValue(true);
+        retrieveTask = new RetriveDogsTask();
+        retrieveTask.execute();
     }
 
     private void fetchFromRemote() {
@@ -77,6 +109,17 @@ public class ListViewModel extends AndroidViewModel {
         dogs.setValue(dogList);
         dogLoadError.setValue(false);
         loading.setValue(false);
+
+        if (insertTask != null ){
+            insertTask.cancel(true);
+            insertTask = null;
+        }
+
+        if (insertTask != null ){
+            insertTask.cancel(true);
+            insertTask = null;
+        }
+
     }
 
     @Override
@@ -93,9 +136,15 @@ public class ListViewModel extends AndroidViewModel {
             insertTask = null;
         }
 
+
+        //Recovery task
+        if (retrieveTask != null) {
+            retrieveTask.cancel(true);
+            retrieveTask = null;
+        }
+
+
     }
-
-
 
     //Background thread
     private class InsertDogsTask extends AsyncTask<List<DogBreed>, Void, List<DogBreed>> {
@@ -120,6 +169,24 @@ public class ListViewModel extends AndroidViewModel {
         @Override
         protected void onPostExecute(List<DogBreed> dogBreeds) {
             dogsRetrieved(dogBreeds);
+        }
+    }
+
+    private class RetriveDogsTask extends AsyncTask<Void, Void, List<DogBreed>> {
+
+        //Background thread
+        @Override
+        protected List<DogBreed> doInBackground(Void... voids) {
+            return DogDatabase.getInstance(getApplication()).dogDao().getAllDogs();
+        }
+
+        //Foreground thread
+
+        @Override
+        protected void onPostExecute(List<DogBreed> dogBreeds) {
+            dogsRetrieved(dogBreeds);
+            Toast.makeText(getApplication(), "Dogs retrivied from database", Toast.LENGTH_SHORT).show();
+            prefHelper.saveUpdateTime(System.nanoTime());
         }
     }
 
