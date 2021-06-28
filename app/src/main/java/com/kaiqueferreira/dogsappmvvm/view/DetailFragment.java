@@ -1,6 +1,9 @@
 package com.kaiqueferreira.dogsappmvvm.view;
 
 import android.annotation.SuppressLint;
+import android.app.AlertDialog;
+import android.app.PendingIntent;
+import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
@@ -16,6 +19,7 @@ import androidx.navigation.Navigation;
 import androidx.palette.graphics.Palette;
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable;
 
+import android.telephony.SmsManager;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -33,8 +37,10 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.kaiqueferreira.dogsappmvvm.DetailFragmentArgs;
 import com.kaiqueferreira.dogsappmvvm.R;
 import com.kaiqueferreira.dogsappmvvm.databinding.FragmentDetailBinding;
+import com.kaiqueferreira.dogsappmvvm.databinding.SendSmsDialogBinding;
 import com.kaiqueferreira.dogsappmvvm.model.DogBreed;
 import com.kaiqueferreira.dogsappmvvm.model.DogPalette;
+import com.kaiqueferreira.dogsappmvvm.model.SmsInfo;
 import com.kaiqueferreira.dogsappmvvm.util.Util;
 import com.kaiqueferreira.dogsappmvvm.viewmodel.DetailViewModel;
 
@@ -48,6 +54,8 @@ public class DetailFragment extends Fragment {
     private FragmentDetailBinding binding;
 
     private Boolean sendSmsStarted = false;
+
+    private DogBreed currentDog;
 
 
     /* Traditionally method
@@ -111,8 +119,8 @@ public class DetailFragment extends Fragment {
         viewModel.dogLiveData.observe(this, dogBreed -> {
             //Verify getContext() != null, sometimes application destroyed and don't have a context
             if (dogBreed != null && dogBreed instanceof DogBreed && getContext() != null) {
+                currentDog = dogBreed;
                 binding.setDog(dogBreed);
-
                 //Verify imageUrl not null when use in Palette
                 if (dogBreed.imageUrl != null) {
                     setupBackgroundColor(dogBreed.imageUrl);
@@ -164,8 +172,15 @@ public class DetailFragment extends Fragment {
                 break;
             }
             case R.id.action_share: {
-                Toast.makeText(getContext(), "Action share", Toast.LENGTH_SHORT).show();
 
+                Toast.makeText(getContext(), "Action share", Toast.LENGTH_SHORT).show();
+                Intent intent = new Intent(Intent.ACTION_SEND);
+                intent.setType("text/plain");
+                intent.putExtra(Intent.EXTRA_SUBJECT, "Check out this dog breed");
+                intent.putExtra(Intent.EXTRA_TEXT, currentDog.dogBreed + " bred for " + currentDog.bredFor);
+                intent.putExtra(Intent.EXTRA_STREAM,currentDog.imageUrl);
+                startActivity(Intent.createChooser(intent,"Share with"));
+                break;
             }
         }
 
@@ -173,7 +188,39 @@ public class DetailFragment extends Fragment {
     }
 
     public void onPermissionResult(Boolean permissionGranted) {
-        sendSmsStarted = false;
+        //sendSmsStarted = false;
+
+        if (isAdded() && sendSmsStarted && permissionGranted) {
+            SmsInfo smsInfo = new SmsInfo("",currentDog.dogBreed + " bred for " + currentDog.bredFor, currentDog.imageUrl);
+            SendSmsDialogBinding dialogBinding = DataBindingUtil.inflate(
+                    LayoutInflater.from(getContext()),
+                    R.layout.send_sms_dialog,
+                    null,
+                    false
+            );
+
+            new AlertDialog.Builder(getContext())
+                    .setView(dialogBinding.getRoot())
+                    .setPositiveButton("Send SMS", ((dialog, which) ->{
+                        if (!dialogBinding.smsDestination.getText().toString().isEmpty()) {
+                            smsInfo.to = dialogBinding.smsDestination.getText().toString();
+                            sendSms(smsInfo);
+                        }
+                    }))
+                    .setNegativeButton("Cancel", ((dialog, which) -> { }))
+                    .show();
+
+            sendSmsStarted = false;
+
+            dialogBinding.setSmsInfo(smsInfo);
+        }
+    }
+
+    private void sendSms(SmsInfo smsInfo) {
+        Intent intent = new Intent(getContext(), MainActivity.class);
+        PendingIntent pi = PendingIntent.getActivity(getContext(), 0, intent,0);
+        SmsManager smsManager = SmsManager.getDefault();
+        smsManager.sendTextMessage(smsInfo.to, null, smsInfo.text, pi, null);
     }
 
     /*@SuppressLint("FragmentLiveDataObserve")
