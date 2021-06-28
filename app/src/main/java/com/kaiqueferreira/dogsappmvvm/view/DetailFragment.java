@@ -17,10 +17,14 @@ import androidx.palette.graphics.Palette;
 import androidx.swiperefreshlayout.widget.CircularProgressDrawable;
 
 import android.view.LayoutInflater;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.request.target.CustomTarget;
@@ -42,6 +46,8 @@ public class DetailFragment extends Fragment {
     private int dogUuid;
     private DetailViewModel viewModel;
     private FragmentDetailBinding binding;
+
+    private Boolean sendSmsStarted = false;
 
 
     /* Traditionally method
@@ -74,6 +80,8 @@ public class DetailFragment extends Fragment {
         //return view;
         FragmentDetailBinding binding = DataBindingUtil.inflate(inflater, R.layout.fragment_detail, container, false);
         this.binding = binding;
+        //Set menu
+        setHasOptionsMenu(true);
         return binding.getRoot();
 
         //Use databinding  like a viewholder findviewById
@@ -136,6 +144,36 @@ public class DetailFragment extends Fragment {
 
                     }
                 });
+    }
+
+    @Override
+    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
+        super.onCreateOptionsMenu(menu, inflater);
+        inflater.inflate(R.menu.detail_menu,menu);
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.action_send_sms: {
+                Toast.makeText(getContext(), "Action send sms", Toast.LENGTH_SHORT).show();
+                if (!sendSmsStarted) {
+                    sendSmsStarted = true;
+                    ((MainActivity) getActivity()).checkSmsPermission();
+                }
+                break;
+            }
+            case R.id.action_share: {
+                Toast.makeText(getContext(), "Action share", Toast.LENGTH_SHORT).show();
+
+            }
+        }
+
+        return super.onOptionsItemSelected(item);
+    }
+
+    public void onPermissionResult(Boolean permissionGranted) {
+        sendSmsStarted = false;
     }
 
     /*@SuppressLint("FragmentLiveDataObserve")
